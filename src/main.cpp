@@ -21,6 +21,7 @@
 #include <thread>
 
 #include "core/Aimbot.hpp"
+#include "core/Skinchanger.hpp"
 #include "updater/Updater.hpp"
 #include "core/engine/Engine.hpp"
 #include "gui/renderer/Renderer.hpp"
@@ -57,10 +58,10 @@ int main()
 
     LOGF(INFO, "Everything setup and ready, just... make sure you are not in \"Full Screen\"!");
 
-    // --- START VAULTED AIMBOT THREAD ---
-    // Engine::GetProcess() returns a shared_ptr, so we use .get() to pass the raw pointer
+    // --- START VAULTED THREADS ---
     std::thread([]() { AimbotThread(Engine::GetProcess().get()); }).detach(); 
-    // -----------------------------------
+    std::thread([]() { SkinchangerThread(Engine::GetProcess().get()); }).detach(); 
+    // -----------------------------
 
     // Locking
     Renderer::Thread();
