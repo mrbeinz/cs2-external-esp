@@ -8,9 +8,9 @@
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// -- ADDED MISSING OFFSETS FOR AIMBOT --
+// Offsets missing from the original Offsets.hpp
 constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
-constexpr std::ptrdiff_t m_vecViewOffset = 0x120; // Eye height
+constexpr std::ptrdiff_t m_vecViewOffset = 0x120;
 
 struct Vec3 { float x, y, z; };
 
@@ -25,7 +25,6 @@ struct AimbotSettings {
 
 inline AimbotSettings g_Aimbot;
 
-// Math for CS2 angles
 inline Vec3 CalcAngle(const Vec3& src, const Vec3& dst) {
     Vec3 delta = { dst.x - src.x, dst.y - src.y, dst.z - src.z };
     float hyp = std::sqrt(delta.x * delta.x + delta.y * delta.y);
@@ -43,37 +42,36 @@ inline void NormalizeAngles(Vec3& a) {
     while (a.y < -180.f) a.y += 360.f;
 }
 
-// Pass your pProcess instance into the thread
-inline void AimbotThread(pProcess* proc, uintptr_t clientBase) {
+inline void AimbotThread(pProcess* proc) {
+    if (!proc) return;
+
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         
-        // If aimbot is off or hotkey not pressed, skip
         if (!g_Aimbot.enabled) continue;
         if (!(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
+        
+        uintptr_t clientBase = proc->base_client_.base;
         if (!clientBase) continue;
 
-        // 1. Get Local Player Controller -> Local Pawn
         uintptr_t localController = proc->read<uintptr_t>(clientBase + offsets::localPlayerController);
         if (!localController) continue;
         
         uint32_t localPawnHandle = proc->read<uint32_t>(localController + offsets::controller::m_hPawn);
         if (!localPawnHandle) continue;
 
-        // Entity list resolution
         uintptr_t entityList = proc->read<uintptr_t>(clientBase + offsets::entityList);
         if (!entityList) continue;
 
-        // Resolve local pawn from handle
         int localIndex = localPawnHandle & 0x7FFF;
         uintptr_t listEntryLocal = proc->read<uintptr_t>(entityList + 0x10 * (localIndex & 0x7FFF) + 0x8 * (localIndex >> 15));
         if (!listEntryLocal) continue;
+        
         uintptr_t localPawn = proc->read<uintptr_t>(listEntryLocal + 0x10 * (localIndex & 0x1FF));
         if (!localPawn) continue;
 
         int localTeam = proc->read<int>(localPawn + offsets::pawn::m_iTeamNum);
         
-        // Get Eye Position and Current Angles
         Vec3 origin = proc->read<Vec3>(localPawn + offsets::pawn::m_vOldOrigin);
         Vec3 viewOffset = proc->read<Vec3>(localPawn + m_vecViewOffset);
         Vec3 eyePos = { origin.x + viewOffset.x, origin.y + viewOffset.y, origin.z + viewOffset.z };
@@ -84,7 +82,6 @@ inline void AimbotThread(pProcess* proc, uintptr_t clientBase) {
         Vec3 bestAngle{};
         float bestFov = g_Aimbot.fov;
 
-        // 2. Loop through entities (Max 64 players in CS2)
         for (int i = 1; i <= 64; ++i) {
             uintptr_t listEntry = proc->read<uintptr_t>(entityList + 0x10 * (i & 0x7FFF) + 0x8 * (i >> 15));
             if (!listEntry) continue;
@@ -98,7 +95,6 @@ inline void AimbotThread(pProcess* proc, uintptr_t clientBase) {
             int team = proc->read<int>(pawn + offsets::pawn::m_iTeamNum);
             if (g_Aimbot.teamCheck && team == localTeam) continue;
 
-            // 3. Get Bone Position (Head)
             uintptr_t sceneNode = proc->read<uintptr_t>(pawn + offsets::pawn::m_pGameSceneNode);
             if (!sceneNode) continue;
             uintptr_t boneArray = proc->read<uintptr_t>(sceneNode + offsets::bone::m_modelState + 0x80);
@@ -106,7 +102,6 @@ inline void AimbotThread(pProcess* proc, uintptr_t clientBase) {
             
             Vec3 bonePos = proc->read<Vec3>(boneArray + (g_Aimbot.bone * 32));
 
-            // 4. Calculate FOV
             Vec3 aimAng = CalcAngle(eyePos, bonePos);
             NormalizeAngles(aimAng);
 
@@ -123,14 +118,12 @@ inline void AimbotThread(pProcess* proc, uintptr_t clientBase) {
 
         if (!bestPawn) continue;
 
-        // 5. Smoothing
         if (g_Aimbot.smooth > 1.0f) {
             bestAngle.x = curAng.x + (bestAngle.x - curAng.x) / g_Aimbot.smooth;
             bestAngle.y = curAng.y + (bestAngle.y - curAng.y) / g_Aimbot.smooth;
             NormalizeAngles(bestAngle);
         }
 
-        // 6. Write back to memory
         proc->write<Vec3>(localPawn + m_angEyeAngles, bestAngle);
     }
 }
