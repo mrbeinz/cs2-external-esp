@@ -5,7 +5,6 @@
 #include "gui/renderer/window/Window.hpp" // Circular dependency
 #include "assets/fonts/Icons.h";
 
-
 bool Menu::Init() {
 	return GetInstance().InitImpl();
 }
@@ -41,14 +40,11 @@ void Menu::RenderImpl() {
 	static auto screen = io.DisplaySize;
 	static auto color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_None;
 
-#ifdef _DEBUG
-	static auto title = "github.com/IMXNOOBX/cs2-external-esp (recode) [DEV]";
-#else
-	static auto title = "cs2-external-esp | recode";
-#endif
+	// Rebranded Title
+	static auto title = "VAULTED";
 
-	ImGui::SetNextWindowSize(ImVec2(600, 370), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowPos(ImVec2(screen.x / 2 - 300, screen.y / 2 - 150), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(screen.x / 2 - 300, screen.y / 2 - 200), ImGuiCond_FirstUseEver);
 
 	ImGui::GetWindowPos();
 	if (ImGui::Begin(title, nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)) {
@@ -61,18 +57,41 @@ void Menu::RenderImpl() {
 		{
 			auto size = ImGui::GetContentRegionAvail();
 
-			ImGui::BeginChild("##tab_buttons", ImVec2(120, size.y), true);
+			ImGui::BeginChild("##tab_buttons", ImVec2(130, size.y), true);
 			{
+				// --- VAULTED BRANDING ---
+				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 15);
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.60f, 0.20f, 1.00f, 1.0f)); // Purple glow text
+				ImGui::Text("VAULTED");
+				ImGui::PopStyleColor();
+				
+				ImGui::Spacing();
+				ImGui::Separator();
+				ImGui::Spacing();
+
 				ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.1f, 0.5f));
+				
+				// --- AIM TAB BUTTON ---
+				bool is_aim_active = (active_tab == 3);
+				if (is_aim_active) {
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+				}
+				if (ImGui::Button("Aim", ImVec2(-1, 28))) active_tab = 3;
+				if (is_aim_active) ImGui::PopStyleColor(3);
+
+				// --- EXISTING TABS ---
 				for (const auto& tab : tabs)
 				{
 					bool is_active = (active_tab == tab.id);
 
 					if (is_active)
 					{
-						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
-						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
-						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.15f, 0.15f, 0.15f, 1.0f));
+						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+						ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
 					}
 
 					if (ImGui::Button((tab.icon + " " + tab.label).c_str(), ImVec2(-1, 28)))
@@ -84,7 +103,7 @@ void Menu::RenderImpl() {
 				ImGui::PopStyleVar(1);
 
 				auto space = ImGui::GetContentRegionAvail().y;
-				ImGui::SetCursorPosY(ImGui::GetCursorPos().y + space - 16.f * 3);
+				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + space - 16.f * 3);
 
 				ImGui::Dummy(ImVec2(11, 0)); ImGui::SameLine();
 				ImGui::TextLinkOpenURL(Icons::DISCORD, "https://discord.gg/pRew8ZDkyp");
@@ -101,7 +120,26 @@ void Menu::RenderImpl() {
 
 			ImGui::BeginChild("##tab_content", ImVec2(0, size.y), true);
 			{
-				if (active_tab == Tab::PLAYER)
+				// --- AIM TAB CONTENT ---
+				if (active_tab == 3)
+				{
+					ImGui::Text("Aimbot");
+					ImGui::Separator();
+					ImGui::Spacing();
+
+					ImGui::Checkbox("Enable Aimbot", &g_Aimbot.enabled);
+					ImGui::BeginDisabled(!g_Aimbot.enabled);
+					{
+						ImGui::SliderFloat("FOV", &g_Aimbot.fov, 1.0f, 180.0f, "%.1f");
+						ImGui::SliderFloat("Smoothness", &g_Aimbot.smooth, 1.0f, 10.0f, "%.1f");
+						ImGui::Checkbox("Team Check", &g_Aimbot.teamCheck);
+					}
+					ImGui::EndDisabled();
+					
+					ImGui::Spacing();
+					ImGui::TextDisabled("Hotkey: Mouse 5");
+				}
+				else if (active_tab == Tab::PLAYER)
 				{
 					ImGui::Text("Visuals");
 					ImGui::Separator();
@@ -359,17 +397,21 @@ void Menu::SetupStyles() {
 	style.Colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 
-	style.Colors[ImGuiCol_WindowBg] = ImColor(10, 10, 10);
-	style.Colors[ImGuiCol_ChildBg] = ImColor(10, 10, 10);
-	style.Colors[ImGuiCol_PopupBg] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
-	style.Colors[ImGuiCol_Border] = ImColor(50, 50, 50);
+	// Deep Black Backgrounds
+	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.95f);
+	style.Colors[ImGuiCol_ChildBg] = ImVec4(0.03f, 0.03f, 0.03f, 0.95f);
+	style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
+	
+	// Purple Glowing Border
+	style.Colors[ImGuiCol_Border] = ImVec4(0.60f, 0.20f, 1.00f, 0.80f);
 	style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 
-	style.Colors[ImGuiCol_FrameBg] = ImColor(75, 75, 75);
-	style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
-	style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.67f, 0.67f, 0.67f, 0.39f);
-	style.Colors[ImGuiCol_TitleBg] = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
-	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+	style.Colors[ImGuiCol_FrameBg] = ImVec4(0.10f, 0.10f, 0.12f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.20f, 0.20f, 0.25f, 1.00f);
+	
+	style.Colors[ImGuiCol_TitleBg] = ImVec4(0.02f, 0.02f, 0.02f, 1.00f);
+	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
 	style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
 
 	style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
@@ -377,37 +419,42 @@ void Menu::SetupStyles() {
 	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
-	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.11f, 0.64f, 0.92f, 1.00f);
+	
+	// Purple Accents
+	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.70f, 0.30f, 1.00f, 1.00f);
 
-	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.11f, 0.64f, 0.92f, 1.00f);
-	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.08f, 0.50f, 0.72f, 1.00f);
-
-	style.Colors[ImGuiCol_Button] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
-	style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.67f, 0.67f, 0.67f, 0.39f);
-	style.Colors[ImGuiCol_Header] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
-	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.67f, 0.67f, 0.67f, 0.39f);
+	style.Colors[ImGuiCol_Button] = ImVec4(0.12f, 0.12f, 0.14f, 1.00f);
+	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
+	style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.40f, 0.15f, 0.80f, 1.00f);
+	
+	style.Colors[ImGuiCol_Header] = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
+	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.20f, 0.20f, 0.25f, 1.00f);
+	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
+	
 	style.Colors[ImGuiCol_Separator] = style.Colors[ImGuiCol_Border];
-	style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.41f, 0.42f, 0.44f, 1.00f);
-	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+	style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.50f, 0.20f, 0.90f, 1.00f);
+	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 
 	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 	style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.29f, 0.30f, 0.31f, 0.67f);
 	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.29f, 0.30f, 0.31f, 0.95f);
 
 	style.Colors[ImGuiCol_Tab] = ImVec4(0.08f, 0.08f, 0.09f, 0.83f);
-	style.Colors[ImGuiCol_TabHovered] = ImVec4(0.33f, 0.34f, 0.36f, 0.83f);
-	style.Colors[ImGuiCol_TabActive] = ImVec4(0.23f, 0.23f, 0.24f, 1.00f);
+	style.Colors[ImGuiCol_TabHovered] = ImVec4(0.20f, 0.20f, 0.25f, 0.83f);
+	style.Colors[ImGuiCol_TabActive] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
 	style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
+	
 	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
 	style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
 	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
-	style.Colors[ImGuiCol_DragDropTarget] = ImVec4(0.11f, 0.64f, 0.92f, 1.00f);
-	style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+	
+	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.60f, 0.20f, 1.00f, 0.35f);
+	style.Colors[ImGuiCol_DragDropTarget] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
+	style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
 	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
@@ -415,13 +462,11 @@ void Menu::SetupStyles() {
 	style.FrameBorderSize = 1.0f;
 
 	// Window & Frame
-	style.WindowRounding = 12.f;
-	style.ChildRounding = 10.f;
-
-	style.FrameRounding = 5.f;
-	style.PopupRounding = 5.f;
-
-	style.GrabRounding = 3.f;
+	style.WindowRounding = 8.f;
+	style.ChildRounding = 6.f;
+	style.FrameRounding = 4.f;
+	style.PopupRounding = 4.f;
+	style.GrabRounding = 4.f;
 
 	auto& io = ImGui::GetIO();
 
@@ -433,7 +478,6 @@ void Menu::SetupStyles() {
 	merge_icon_cfg.MergeMode = true;
 	merge_icon_cfg.GlyphOffset = Vec2_t(0, 3.5f);
 
-	// the icons will use the size specified when getting added so it ignores the base size
 	static const ImWchar icon_ranges[] = { 0xE100, 0xE108, 0 };
 	io.Fonts->AddFontFromMemoryTTF(icons_font, icons_font_len, 20.f, &merge_icon_cfg, icon_ranges);
 }
