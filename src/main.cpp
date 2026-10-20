@@ -58,8 +58,8 @@ int main()
     LOGF(INFO, "Everything setup and ready, just... make sure you are not in \"Full Screen\"!");
 
     // --- START VAULTED AIMBOT THREAD ---
-    // We use Engine::GetProcess() to get the correct pointer!
-    std::thread(AimbotThread, Engine::GetProcess()).detach(); 
+    // Using a lambda to handle type conversion safely
+    std::thread([]() { AimbotThread(Engine::GetProcess()); }).detach(); 
     // -----------------------------------
 
     // Locking
