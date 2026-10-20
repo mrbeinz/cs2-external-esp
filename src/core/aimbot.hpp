@@ -8,7 +8,7 @@
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// Offsets missing from the original Offsets.hpp
+// Missing offsets added for aimbot
 constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
 constexpr std::ptrdiff_t m_vecViewOffset = 0x120;
 
@@ -20,10 +20,39 @@ struct AimbotSettings {
     float fov           = 15.0f;
     float smooth        = 1.5f;
     int   bone          = 6; // 6 = Head
-    int   hotkey        = VK_XBUTTON2; // Mouse 5
+    int   hotkey        = VK_XBUTTON2; // Default: Mouse 5
 };
 
 inline AimbotSettings g_Aimbot;
+
+// Helper to turn Windows VK codes into readable strings
+inline const char* GetKeyName(int vk) {
+    switch (vk) {
+        case 0: return "None";
+        case VK_LBUTTON: return "Mouse 1";
+        case VK_RBUTTON: return "Mouse 2";
+        case VK_MBUTTON: return "Mouse 3";
+        case VK_XBUTTON1: return "Mouse 4";
+        case VK_XBUTTON2: return "Mouse 5";
+        case VK_SHIFT: return "Shift";
+        case VK_CONTROL: return "Ctrl";
+        case VK_MENU: return "Alt";
+        case VK_SPACE: return "Space";
+        case VK_TAB: return "Tab";
+        case VK_CAPITAL: return "Caps Lock";
+        case VK_F1: return "F1"; case VK_F2: return "F2"; case VK_F3: return "F3"; case VK_F4: return "F4";
+        case VK_F5: return "F5"; case VK_F6: return "F6"; case VK_F7: return "F7"; case VK_F8: return "F8";
+        case VK_F9: return "F9"; case VK_F10: return "F10"; case VK_F11: return "F11"; case VK_F12: return "F12";
+    }
+    // Alpha-numeric keys
+    if (vk >= 0x30 && vk <= 0x39) { // 0-9
+        static char num[2]; num[0] = (char)vk; num[1] = '\0'; return num;
+    }
+    if (vk >= 0x41 && vk <= 0x5A) { // A-Z
+        static char letter[2]; letter[0] = (char)vk; letter[1] = '\0'; return letter;
+    }
+    return "Unknown Key";
+}
 
 inline Vec3 CalcAngle(const Vec3& src, const Vec3& dst) {
     Vec3 delta = { dst.x - src.x, dst.y - src.y, dst.z - src.z };
@@ -49,7 +78,9 @@ inline void AimbotThread(pProcess* proc) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         
         if (!g_Aimbot.enabled) continue;
-        if (!(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
+        
+        // If hotkey is 0 (None), it's always active. Otherwise, check if held.
+        if (g_Aimbot.hotkey != 0 && !(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
         
         uintptr_t clientBase = proc->base_client_.base;
         if (!clientBase) continue;
