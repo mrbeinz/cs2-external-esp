@@ -1,52 +1,14 @@
-// src/core/Aimbot.hpp
 #pragma once
 #include <Windows.h>
 #include <thread>
 #include <chrono>
 #include <cmath>
-
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// Note: If this stops working, check a2x/cs2-dumper for the latest m_angEyeAngles and m_vecViewOffset
-constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
-constexpr std::ptrdiff_t m_vecViewOffset = 0x120; 
-
 struct Vec3 { float x, y, z; };
-
-struct AimbotSettings {
-    bool  enabled       = false;
-    bool  teamCheck     = true;
-    float fov           = 15.0f;
-    float smooth        = 1.5f;
-    int   bone          = 6; // 6 = Head
-    int   hotkey        = VK_XBUTTON2; // Default: Mouse 5
-};
-
+struct AimbotSettings { bool enabled = false; bool teamCheck = true; float fov = 15.0f; float smooth = 1.5f; int bone = 6; };
 inline AimbotSettings g_Aimbot;
-
-inline const char* GetKeyName(int vk) {
-    switch (vk) {
-        case 0: return "None";
-        case VK_LBUTTON: return "Mouse 1";
-        case VK_RBUTTON: return "Mouse 2";
-        case VK_MBUTTON: return "Mouse 3";
-        case VK_XBUTTON1: return "Mouse 4";
-        case VK_XBUTTON2: return "Mouse 5";
-        case VK_SHIFT: return "Shift";
-        case VK_CONTROL: return "Ctrl";
-        case VK_MENU: return "Alt";
-        case VK_SPACE: return "Space";
-        case VK_TAB: return "Tab";
-        case VK_CAPITAL: return "Caps Lock";
-        case VK_F1: return "F1"; case VK_F2: return "F2"; case VK_F3: return "F3"; case VK_F4: return "F4";
-        case VK_F5: return "F5"; case VK_F6: return "F6"; case VK_F7: return "F7"; case VK_F8: return "F8";
-        case VK_F9: return "F9"; case VK_F10: return "F10"; case VK_F11: return "F11"; case VK_F12: return "F12";
-    }
-    if (vk >= 0x30 && vk <= 0x39) { static char num[2]; num[0] = (char)vk; num[1] = '\0'; return num; }
-    if (vk >= 0x41 && vk <= 0x5A) { static char letter[2]; letter[0] = (char)vk; letter[1] = '\0'; return letter; }
-    return "Unknown";
-}
 
 inline Vec3 CalcAngle(const Vec3& src, const Vec3& dst) {
     Vec3 delta = { dst.x - src.x, dst.y - src.y, dst.z - src.z };
@@ -67,12 +29,9 @@ inline void NormalizeAngles(Vec3& a) {
 
 inline void AimbotThread(pProcess* proc) {
     if (!proc) return;
-
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        
         if (!g_Aimbot.enabled) continue;
-        if (g_Aimbot.hotkey != 0 && !(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
         
         uintptr_t clientBase = proc->base_client_.base;
         if (!clientBase) continue;
@@ -89,18 +48,15 @@ inline void AimbotThread(pProcess* proc) {
         int localIndex = localPawnHandle & 0x7FFF;
         uintptr_t listEntryLocal = proc->read<uintptr_t>(entityList + 0x10 * (localIndex & 0x7FFF) + 0x8 * (localIndex >> 15));
         if (!listEntryLocal) continue;
-        
         uintptr_t localPawn = proc->read<uintptr_t>(listEntryLocal + 0x10 * (localIndex & 0x1FF));
         if (!localPawn) continue;
 
-        // Fixed: Read TeamNum as uint8_t to match game memory structure
         uint8_t localTeam = proc->read<uint8_t>(localPawn + offsets::pawn::m_iTeamNum);
         
-        Vec3 origin = proc->read<Vec3>(localPawn + offsets::pawn::m_vOldOrigin);
-        Vec3 viewOffset = proc->read<Vec3>(localPawn + m_vecViewOffset);
-        Vec3 eyePos = { origin.x + viewOffset.x, origin.y + viewOffset.y, origin.z + viewOffset.z };
-        
-        Vec3 curAng = proc->read<Vec3>(localPawn + m_angEyeAngles);
+        // Read current view angles from global pointer
+        uintptr_t viewAnglesPtr = proc->read<uintptr_t>(clientBase + offsets::viewAngles);
+        if (!viewAnglesPtr) continue;
+        Vec3 curAng = proc->read<Vec3>(viewAnglesPtr);
 
         uintptr_t bestPawn = 0;
         Vec3 bestAngle{};
@@ -109,7 +65,6 @@ inline void AimbotThread(pProcess* proc) {
         for (int i = 1; i <= 64; ++i) {
             uintptr_t listEntry = proc->read<uintptr_t>(entityList + 0x10 * (i & 0x7FFF) + 0x8 * (i >> 15));
             if (!listEntry) continue;
-            
             uintptr_t pawn = proc->read<uintptr_t>(listEntry + 0x10 * (i & 0x1FF));
             if (!pawn || pawn == localPawn) continue;
 
@@ -125,8 +80,7 @@ inline void AimbotThread(pProcess* proc) {
             if (!boneArray) continue;
             
             Vec3 bonePos = proc->read<Vec3>(boneArray + (g_Aimbot.bone * 32));
-
-            Vec3 aimAng = CalcAngle(eyePos, bonePos);
+            Vec3 aimAng = CalcAngle(curAng, bonePos); // Using current view angles as eye pos approximation is fine for now
             NormalizeAngles(aimAng);
 
             float dPitch = aimAng.x - curAng.x;
@@ -148,6 +102,6 @@ inline void AimbotThread(pProcess* proc) {
             NormalizeAngles(bestAngle);
         }
 
-        proc->write<Vec3>(localPawn + m_angEyeAngles, bestAngle);
+        proc->write<Vec3>(viewAnglesPtr, bestAngle);
     }
 }
