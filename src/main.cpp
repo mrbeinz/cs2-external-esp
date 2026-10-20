@@ -17,15 +17,19 @@
     © Copyright by IMXNOOBX (https://github.com/IMXNOOBX) and contributors.
     See https://github.com/IMXNOOBX/cs2-external-esp/-/blob/main/LICENSE for full details.
 */
-#include "core/Aimbot.hpp"
 #include <iostream>
 #include <thread>
 
+#include "core/Aimbot.hpp"
 #include "updater/Updater.hpp"
 #include "core/engine/Engine.hpp"
 #include "gui/renderer/Renderer.hpp"
 
 #include <external/exception.hpp>
+
+// NOTE: If "ProcessMgr" causes an error, open Engine.hpp, 
+// find the exact name of the pProcess instance, and replace it here.
+extern pProcess ProcessMgr;
 
 int main()
 {
@@ -56,6 +60,12 @@ int main()
     }
 
     LOGF(INFO, "Everything setup and ready, just... make sure you are not in \"Full Screen\"!");
+
+    // --- START VAULTED AIMBOT THREAD ---
+    // We pass the global ProcessMgr pointer directly to the thread.
+    // The thread will pull the client base internally.
+    std::thread(AimbotThread, &ProcessMgr).detach(); 
+    // -----------------------------------
 
     // Locking
     Renderer::Thread();
