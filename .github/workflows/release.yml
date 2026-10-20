@@ -58,6 +58,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
       - name: Generate changelog
         id: changelog
         run: |
@@ -93,6 +94,14 @@ jobs:
           echo "- **Build ID:** `$RUN_ID`" >> CHANGELOG.md
           echo "" >> CHANGELOG.md
         shell: bash
+
+      # --- NEW STEP ADDED HERE TO SHOW IN ACTIONS TAB ---
+      - name: Upload Action Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: VAULTED-CS2-Build
+          path: release.zip
+      # --------------------------------------------------
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
