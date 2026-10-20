@@ -17,7 +17,7 @@
     © Copyright by IMXNOOBX (https://github.com/IMXNOOBX) and contributors.
     See https://github.com/IMXNOOBX/cs2-external-esp/-/blob/main/LICENSE for full details.
 */
-
+#include "core/Aimbot.hpp"
 #include <iostream>
 
 #include "updater/Updater.hpp"
