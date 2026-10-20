@@ -18,18 +18,13 @@ constexpr std::ptrdiff_t m_flFallbackWear = 0x1C4;
 constexpr std::ptrdiff_t m_nFallbackSeed = 0x1C8;
 constexpr std::ptrdiff_t m_iItemIDHigh = 0x1D0;
 constexpr std::ptrdiff_t m_iAccountID = 0x1D4;
-constexpr std::ptrdiff_t m_bInitialized = 0x1E8; // Forces update
+constexpr std::ptrdiff_t m_bInitialized = 0x1E8; // Force update flag
 
 // --- DATABASES FOR UI ---
 struct WeaponInfo { int id; const char* name; };
 inline const std::vector<WeaponInfo> g_WeaponList = {
-    { 1,  "Desert Eagle" },
-    { 4,  "Glock-18" },
-    { 7,  "AK-47" },
-    { 9,  "AWP" },
-    { 16, "M4A4" },
-    { 60, "M4A1-S" },
-    { 61, "USP-S" }
+    { 1,  "Desert Eagle" }, { 4,  "Glock-18" }, { 7,  "AK-47" }, { 9,  "AWP" },
+    { 16, "M4A4" }, { 60, "M4A1-S" }, { 61, "USP-S" }
 };
 
 inline const std::map<int, std::string> g_SkinDatabase = {
@@ -109,14 +104,13 @@ inline void SkinchangerThread(pProcess* proc) {
         uint16_t currentDefIndex = proc->read<uint16_t>(econItemView + m_iItemDefinitionIndex);
         if (currentDefIndex != g_Skinchanger.target_weapon_id) continue;
 
-        // Apply Skin Values
         proc->write<int>(econItemView + m_nFallbackPaintKit, g_Skinchanger.skin_id);
         proc->write<float>(econItemView + m_flFallbackWear, g_Skinchanger.wear);
         proc->write<int>(econItemView + m_nFallbackSeed, g_Skinchanger.seed);
         proc->write<int>(econItemView + m_iItemIDHigh, -1);
         proc->write<uint32_t>(econItemView + m_iAccountID, g_local_account_id);
         
-        // Force the game to apply the update
+        // Force the game to apply the new skin
         proc->write<bool>(econItemView + m_bInitialized, false);
         proc->write<bool>(econItemView + m_bInitialized, true);
     }
