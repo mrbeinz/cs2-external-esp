@@ -3,7 +3,7 @@
 #include "core/engine/cache/Cache.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
-#include "assets/fonts/Icons.h";
+#include "assets/fonts/Icons.h"
 
 bool Menu::Init() {
 	return GetInstance().InitImpl();
