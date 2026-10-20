@@ -1,5 +1,6 @@
 #include "Menu.hpp"
 #include "core/Aimbot.hpp"
+#include "core/Skinchanger.hpp"
 #include "core/engine/cache/Cache.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
@@ -40,7 +41,6 @@ void Menu::RenderImpl() {
 	static auto screen = io.DisplaySize;
 	static auto color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_None;
 
-	// Rebranded Title
 	static auto title = "VAULTED";
 
 	ImGui::SetNextWindowSize(ImVec2(600, 400), ImGuiCond_FirstUseEver);
@@ -62,7 +62,7 @@ void Menu::RenderImpl() {
 				// --- VAULTED BRANDING ---
 				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 15);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.60f, 0.20f, 1.00f, 1.0f)); // Purple glow text
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.60f, 0.20f, 1.00f, 1.0f));
 				ImGui::Text("VAULTED");
 				ImGui::PopStyleColor();
 				
@@ -81,6 +81,16 @@ void Menu::RenderImpl() {
 				}
 				if (ImGui::Button("Aim", ImVec2(-1, 28))) active_tab = 3;
 				if (is_aim_active) ImGui::PopStyleColor(3);
+
+				// --- SKINS TAB BUTTON ---
+				bool is_skins_active = (active_tab == 4);
+				if (is_skins_active) {
+					ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+					ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+					ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.60f, 0.20f, 1.00f, 0.30f));
+				}
+				if (ImGui::Button("Skins", ImVec2(-1, 28))) active_tab = 4;
+				if (is_skins_active) ImGui::PopStyleColor(3);
 
 				// --- EXISTING TABS ---
 				for (const auto& tab : tabs)
@@ -138,6 +148,49 @@ void Menu::RenderImpl() {
 					
 					ImGui::Spacing();
 					ImGui::TextDisabled("Hotkey: Mouse 5");
+				}
+				// --- SKINS TAB CONTENT ---
+				else if (active_tab == 4)
+				{
+					ImGui::Text("Skinchanger");
+					ImGui::Separator();
+					ImGui::Spacing();
+
+					ImGui::Checkbox("Enable Skinchanger", &g_Skinchanger.enabled);
+					ImGui::BeginDisabled(!g_Skinchanger.enabled);
+					{
+						// Weapon Dropdown
+						if (ImGui::BeginCombo("Weapon", GetWeaponName(g_Skinchanger.target_weapon_id))) {
+							for (const auto& w : g_WeaponList) {
+								bool is_selected = (g_Skinchanger.target_weapon_id == w.id);
+								if (ImGui::Selectable(w.name, is_selected)) {
+									g_Skinchanger.target_weapon_id = w.id;
+								}
+								if (is_selected) ImGui::SetItemDefaultFocus();
+							}
+							ImGui::EndCombo();
+						}
+
+						// Skin Dropdown
+						if (ImGui::BeginCombo("Skin", GetSkinName(g_Skinchanger.skin_id))) {
+							for (const auto& pair : g_SkinDatabase) {
+								bool is_selected = (g_Skinchanger.skin_id == pair.first);
+								if (ImGui::Selectable(pair.second.c_str(), is_selected)) {
+									g_Skinchanger.skin_id = pair.first;
+								}
+								if (is_selected) ImGui::SetItemDefaultFocus();
+							}
+							ImGui::EndCombo();
+						}
+
+						ImGui::Spacing();
+						ImGui::SliderFloat("Wear", &g_Skinchanger.wear, 0.0f, 1.0f, "%.4f");
+						ImGui::SliderInt("Pattern Seed", &g_Skinchanger.seed, 0, 1000);
+						
+						ImGui::Spacing();
+						ImGui::TextDisabled("Hold the weapon to apply the skin.");
+					}
+					ImGui::EndDisabled();
 				}
 				else if (active_tab == Tab::PLAYER)
 				{
@@ -204,7 +257,6 @@ void Menu::RenderImpl() {
 					}
 					ImGui::EndGroup();
 
-					//ImGui::SameLine();
 					ImGui::Spacing();
 
 					ImGui::Text("Flags");
@@ -213,54 +265,10 @@ void Menu::RenderImpl() {
 					ImGui::BeginGroup();
 					{
 						ImGui::Checkbox("Flashed", &cfg::esp::flags::flashed);
-						ImGui::BeginDisabled(!cfg::esp::flags::flashed);
-						{
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Team flashed color", cfg::esp::colors::flags::flashed_team.data(), color_flags);
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Enemy flashed color", cfg::esp::colors::flags::flashed_enemy.data(), color_flags);
-						}
-						ImGui::EndDisabled();
-
 						ImGui::Checkbox("Reloading", &cfg::esp::flags::reloading);
-						ImGui::BeginDisabled(!cfg::esp::flags::reloading);
-						{
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Team reloading color", cfg::esp::colors::flags::reloading_team.data(), color_flags);
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Enemy reloading color", cfg::esp::colors::flags::reloading_enemy.data(), color_flags);
-						}
-						ImGui::EndDisabled();
-
 						ImGui::Checkbox("Defusing", &cfg::esp::flags::defusing);
-						ImGui::BeginDisabled(!cfg::esp::flags::defusing);
-						{
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Team defusing color", cfg::esp::colors::flags::defusing_team.data(), color_flags);
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Enemy defusing color", cfg::esp::colors::flags::defusing_enemy.data(), color_flags);
-						}
-						ImGui::EndDisabled();
-
 						ImGui::Checkbox("Scoped", &cfg::esp::flags::scoped);
-						ImGui::BeginDisabled(!cfg::esp::flags::scoped);
-						{
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Team scoped color", cfg::esp::colors::flags::scoped_team.data(), color_flags);
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Enemy scoped color", cfg::esp::colors::flags::scoped_enemy.data(), color_flags);
-						}
-						ImGui::EndDisabled();
-
 						ImGui::Checkbox("Has C4", &cfg::esp::flags::has_c4);
-						ImGui::BeginDisabled(!cfg::esp::flags::has_c4);
-						{
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Team C4 color", cfg::esp::colors::flags::c4_team.data(), color_flags);
-							ImGui::SameLine();
-							ImGui::ColorEdit4("Enemy C4 color", cfg::esp::colors::flags::c4_enemy.data(), color_flags);
-						}
-						ImGui::EndDisabled();
 					}
 					ImGui::EndGroup();
 
@@ -297,7 +305,6 @@ void Menu::RenderImpl() {
 					if (cfg::world::spectators::enabled) {
 						ImGui::Checkbox("Detailed", &cfg::world::spectators::detailed);
 						ImGui::Checkbox("Only Self", &cfg::world::spectators::self_only);
-						ImGui::SetItemTooltip("Only display users spectating you");
 					}
 
 					ImGui::Spacing();
@@ -307,12 +314,7 @@ void Menu::RenderImpl() {
 
 					ImGui::Checkbox("Crosshair", &cfg::world::crosshair::enabled);
 					ImGui::Checkbox("Velocity Graph", &cfg::world::velocity::enabled);
-				#ifdef _DEBUG // Part of the velocity graph for developers
-					if (cfg::world::velocity::enabled) {
-						ImGui::SliderInt("Sample rate", &cfg::world::velocity::sample_rate, 1, 100);
-						ImGui::SliderFloat("Sample length", &cfg::world::velocity::sample_length, 1, 20, "%.1f");
-					}
-				#endif
+
 					ImGui::Spacing();
 
 					ImGui::Text("Radar");
@@ -346,49 +348,12 @@ void Menu::RenderImpl() {
 						Window::vsync = cfg::settings::vsync;
 
 					ImGui::Checkbox("Free CPU", &cfg::settings::free_cpu);
-					ImGui::SetItemTooltip("Let the CPU sleep to Free Resources\nNOTE: might cause performance issues in lower end computers!");
-
-					ImGui::Text("Notes");
-					ImGui::Separator();
-					ImGui::TextWrapped(
-						"If you experience bad performance/lag try the following:\n"
-						"\t- Disable ESP VSync: Look up > VSync: Un-Check\n"
-						"\t- Disable VSync in game: ...Advanced Video > V-Sync: Disabled\n"
-						"\t- Last Resort: Disable \"Free CPU\" option, it will inpact on your overall performace, but improve latency\n"
-					);
-
-#ifdef _DEBUG
-					ImGui::Text("Dev");
-					ImGui::Separator();
-
-					if (ImGui::Checkbox("Console", &cfg::dev::console))
-						if (!cfg::dev::console) LogHelper::Free();
-
-					static int key_out;
-					if (ImGui::Button("Open Menu Key"))
-					{
-						for (int i = ImGuiKey_NamedKey_BEGIN; i < ImGuiKey_NamedKey_END; i++)
-						{
-							if (ImGui::IsKeyPressed((ImGuiKey)i))
-							{
-								key_out = i;
-								LOGF(VERBOSE, "Changed the open menu key to {}", key_out);
-								break;
-							}
-						}
-					}
-
-					ImGui::SliderInt("Cache Refresh Rate", &cfg::dev::cache_refresh_rate, 0, 100, "%dms");
-					ImGui::Checkbox("Force Show Flags", &cfg::dev::force_show_flags);
-#endif
 				}
 			}
 			ImGui::EndChild();
 			ImGui::EndChild();
 		}
-
 	}
-
 	ImGui::End();
 }
 
@@ -397,12 +362,10 @@ void Menu::SetupStyles() {
 	style.Colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
 
-	// Deep Black Backgrounds
 	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.95f);
 	style.Colors[ImGuiCol_ChildBg] = ImVec4(0.03f, 0.03f, 0.03f, 0.95f);
 	style.Colors[ImGuiCol_PopupBg] = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
 	
-	// Purple Glowing Border
 	style.Colors[ImGuiCol_Border] = ImVec4(0.60f, 0.20f, 1.00f, 0.80f);
 	style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
 
@@ -414,13 +377,6 @@ void Menu::SetupStyles() {
 	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.05f, 0.05f, 0.05f, 1.00f);
 	style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
 
-	style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-	style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
-	style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
-	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
-	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
-	
-	// Purple Accents
 	style.Colors[ImGuiCol_CheckMark] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.70f, 0.30f, 1.00f, 1.00f);
@@ -437,31 +393,8 @@ void Menu::SetupStyles() {
 	style.Colors[ImGuiCol_SeparatorHovered] = ImVec4(0.50f, 0.20f, 0.90f, 1.00f);
 	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
 
-	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	style.Colors[ImGuiCol_ResizeGripHovered] = ImVec4(0.29f, 0.30f, 0.31f, 0.67f);
-	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.29f, 0.30f, 0.31f, 0.95f);
-
-	style.Colors[ImGuiCol_Tab] = ImVec4(0.08f, 0.08f, 0.09f, 0.83f);
-	style.Colors[ImGuiCol_TabHovered] = ImVec4(0.20f, 0.20f, 0.25f, 0.83f);
-	style.Colors[ImGuiCol_TabActive] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
-	style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
-	style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
-	
-	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-	style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
-	style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-	
-	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.60f, 0.20f, 1.00f, 0.35f);
-	style.Colors[ImGuiCol_DragDropTarget] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
-	style.Colors[ImGuiCol_NavHighlight] = ImVec4(0.60f, 0.20f, 1.00f, 1.00f);
-	style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
-	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.20f);
-	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
-
 	style.FrameBorderSize = 1.0f;
 
-	// Window & Frame
 	style.WindowRounding = 8.f;
 	style.ChildRounding = 6.f;
 	style.FrameRounding = 4.f;
@@ -469,7 +402,6 @@ void Menu::SetupStyles() {
 	style.GrabRounding = 4.f;
 
 	auto& io = ImGui::GetIO();
-
 	io.Fonts->Clear();
 	io.Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\arial.ttf", 16.0f);
 
@@ -484,9 +416,7 @@ void Menu::SetupStyles() {
 
 void Menu::RenderStartupHelpImpl() {
 	static bool has_opened_menu = false;
-
-	if (has_opened_menu)
-		return;
+	if (has_opened_menu) return;
 
 	auto& io = ImGui::GetIO();
 	auto screen = io.DisplaySize;
