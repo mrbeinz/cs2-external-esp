@@ -19,6 +19,7 @@
 */
 #include "core/Aimbot.hpp"
 #include <iostream>
+#include <thread>
 
 #include "updater/Updater.hpp"
 #include "core/engine/Engine.hpp"
