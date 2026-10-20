@@ -5,7 +5,7 @@
 
 namespace offsets
 {
-	// Hardcoded fallback offsets
+	// Hardcoded fallback offsets from the latest dump
 	inline DWORD entityList = 0x271A908;
 	inline DWORD viewMatrix = 0x256B020;
 	inline DWORD localPlayerController = 0x253CB78;
