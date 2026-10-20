@@ -8,9 +8,9 @@
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// Missing offsets added for aimbot
+// Updated offsets for the latest CS2 patch
 constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
-constexpr std::ptrdiff_t m_vecViewOffset = 0x120;
+constexpr std::ptrdiff_t m_vecViewOffset = 0x120; // C_BaseModelEntity
 
 struct Vec3 { float x, y, z; };
 
@@ -25,7 +25,6 @@ struct AimbotSettings {
 
 inline AimbotSettings g_Aimbot;
 
-// Helper to turn Windows VK codes into readable strings
 inline const char* GetKeyName(int vk) {
     switch (vk) {
         case 0: return "None";
@@ -44,14 +43,9 @@ inline const char* GetKeyName(int vk) {
         case VK_F5: return "F5"; case VK_F6: return "F6"; case VK_F7: return "F7"; case VK_F8: return "F8";
         case VK_F9: return "F9"; case VK_F10: return "F10"; case VK_F11: return "F11"; case VK_F12: return "F12";
     }
-    // Alpha-numeric keys
-    if (vk >= 0x30 && vk <= 0x39) { // 0-9
-        static char num[2]; num[0] = (char)vk; num[1] = '\0'; return num;
-    }
-    if (vk >= 0x41 && vk <= 0x5A) { // A-Z
-        static char letter[2]; letter[0] = (char)vk; letter[1] = '\0'; return letter;
-    }
-    return "Unknown Key";
+    if (vk >= 0x30 && vk <= 0x39) { static char num[2]; num[0] = (char)vk; num[1] = '\0'; return num; }
+    if (vk >= 0x41 && vk <= 0x5A) { static char letter[2]; letter[0] = (char)vk; letter[1] = '\0'; return letter; }
+    return "Unknown";
 }
 
 inline Vec3 CalcAngle(const Vec3& src, const Vec3& dst) {
@@ -78,8 +72,6 @@ inline void AimbotThread(pProcess* proc) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         
         if (!g_Aimbot.enabled) continue;
-        
-        // If hotkey is 0 (None), it's always active. Otherwise, check if held.
         if (g_Aimbot.hotkey != 0 && !(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
         
         uintptr_t clientBase = proc->base_client_.base;
