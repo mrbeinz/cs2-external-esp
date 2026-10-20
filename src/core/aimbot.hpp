@@ -13,7 +13,7 @@ struct AimbotSettings {
     float fov = 15.0f; 
     float smooth = 1.5f; 
     int bone = 6; 
-    int hotkey = VK_XBUTTON2; // Default Mouse 5
+    int hotkey = VK_XBUTTON2; // <--- THIS WAS MISSING
 };
 inline AimbotSettings g_Aimbot;
 
@@ -62,8 +62,6 @@ inline void AimbotThread(pProcess* proc) {
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
         if (!g_Aimbot.enabled) continue;
-        
-        // Hotkey check
         if (g_Aimbot.hotkey != 0 && !(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
         
         uintptr_t clientBase = proc->base_client_.base;
@@ -71,7 +69,6 @@ inline void AimbotThread(pProcess* proc) {
 
         uintptr_t localController = proc->read<uintptr_t>(clientBase + offsets::localPlayerController);
         if (!localController) continue;
-        
         uint32_t localPawnHandle = proc->read<uint32_t>(localController + offsets::controller::m_hPawn);
         if (!localPawnHandle) continue;
 
