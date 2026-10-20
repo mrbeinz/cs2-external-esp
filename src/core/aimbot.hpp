@@ -8,9 +8,9 @@
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// Updated offsets for the latest CS2 patch
+// Note: If this stops working, check a2x/cs2-dumper for the latest m_angEyeAngles and m_vecViewOffset
 constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
-constexpr std::ptrdiff_t m_vecViewOffset = 0x120; // C_BaseModelEntity
+constexpr std::ptrdiff_t m_vecViewOffset = 0x120; 
 
 struct Vec3 { float x, y, z; };
 
@@ -93,7 +93,8 @@ inline void AimbotThread(pProcess* proc) {
         uintptr_t localPawn = proc->read<uintptr_t>(listEntryLocal + 0x10 * (localIndex & 0x1FF));
         if (!localPawn) continue;
 
-        int localTeam = proc->read<int>(localPawn + offsets::pawn::m_iTeamNum);
+        // Fixed: Read TeamNum as uint8_t to match game memory structure
+        uint8_t localTeam = proc->read<uint8_t>(localPawn + offsets::pawn::m_iTeamNum);
         
         Vec3 origin = proc->read<Vec3>(localPawn + offsets::pawn::m_vOldOrigin);
         Vec3 viewOffset = proc->read<Vec3>(localPawn + m_vecViewOffset);
@@ -115,7 +116,7 @@ inline void AimbotThread(pProcess* proc) {
             int hp = proc->read<int>(pawn + offsets::pawn::m_iHealth);
             if (hp <= 0 || hp > 100) continue;
 
-            int team = proc->read<int>(pawn + offsets::pawn::m_iTeamNum);
+            uint8_t team = proc->read<uint8_t>(pawn + offsets::pawn::m_iTeamNum);
             if (g_Aimbot.teamCheck && team == localTeam) continue;
 
             uintptr_t sceneNode = proc->read<uintptr_t>(pawn + offsets::pawn::m_pGameSceneNode);
