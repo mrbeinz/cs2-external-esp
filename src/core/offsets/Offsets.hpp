@@ -1,5 +1,9 @@
 #pragma once
 
+#include <Windows.h>
+#include <string>
+#include <cstddef>
+
 namespace offsets
 {
 	// client.dll
@@ -94,6 +98,14 @@ namespace offsets
 			"89 05 ?? ?? ?? ?? "
 			"48 8B C6 48 89 34 EA 80 BE";
 
+#if 0
+		const std::string localPlayerPawn = "48 8D 05 ?? ?? ?? ?? C3 CC CC CC CC CC CC CC CC 48 83 EC ?? 8B 0D";
+
+		const std::string csgoInput = "48 89 05 ?? ?? ?? ?? 0F 57 C0 0F 11 05";
+		const std::string viewAngles = "F2 42 0F 10 84 28 ?? ?? ?? ??";
+#endif
+
 		const std::string buildNumber = "89 05 ?? ?? ?? ?? 48 8d 0d ?? ?? ?? ?? ff 15 ?? ?? ?? ?? 48 8b 0d";
+
 	}
 }
