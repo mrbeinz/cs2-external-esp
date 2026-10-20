@@ -1,22 +1,20 @@
 #pragma once
-
 #include <Windows.h>
 #include <string>
 #include <cstddef>
 
 namespace offsets
 {
-	// client.dll
-	inline DWORD entityList;
-	inline DWORD viewMatrix;
-	inline DWORD localPlayerController;
-	inline DWORD globalVars;
-	inline DWORD plantedC4;
-	inline DWORD weaponC4;
-	inline DWORD viewAngles; // ADDED: Global view angles
+	// Hardcoded from the latest dump to ensure it works immediately
+	inline DWORD entityList = 0x271A908;
+	inline DWORD viewMatrix = 0x256B020;
+	inline DWORD localPlayerController = 0x253CB78;
+	inline DWORD globalVars = 0x2230090;
+	inline DWORD plantedC4 = 0x24CB3C0;
+	inline DWORD weaponC4 = 0x24C9B30;
+	inline DWORD viewAngles = 0x257BCC8;
 
-	// engine2.dll
-	inline DWORD buildNumber;
+	inline DWORD buildNumber = 0x61CFEC;
 
 	namespace controller {
 		constexpr std::ptrdiff_t m_iPing = 0x838;
@@ -70,31 +68,5 @@ namespace offsets
 		constexpr std::ptrdiff_t maxClients = 0x10;
 		constexpr std::ptrdiff_t currentMapName = 0x180;
 		constexpr std::ptrdiff_t currentTime = 0x2C;
-	}
-
-	namespace signatures
-	{
-		const std::string viewMatrix = "48 8D 0D ?? ?? ?? ?? 48 C1 E0 06";
-		const std::string globalVars = "48 89 15 ?? ?? ?? ?? 48 89 42";
-		const std::string entityList = "48 8B 0D ?? ?? ?? ?? 48 89 7C 24 ?? 8B FA C1 EB";
-		const std::string localPlayerController = "48 8B 05 ?? ?? ?? ?? 41 89 BE";
-		const std::string plantedC4 = "48 8B 1D ?? ?? ?? ?? 45 32 F6";
-		const std::string viewAngles = "48 8B 0D ?? ?? ?? ?? 48 8D 15 ?? ?? ?? ?? 0F 57 C0"; // ADDED SIGNATURE
-		const std::string weaponC4 =
-			"48 89 05 ?? ?? ?? ?? "
-			"F7 C1 ?? ?? ?? ?? "
-			"74 ?? "
-			"81 E1 ?? ?? ?? ?? "
-			"89 0D ?? ?? ?? ?? "
-			"8B 05 ?? ?? ?? ?? "
-			"89 1D ?? ?? ?? ?? "
-			"EB ?? "
-			"48 8B 15 ?? ?? ?? ?? "
-			"48 8B 5C 24 ?? "
-			"FF C0 "
-			"89 05 ?? ?? ?? ?? "
-			"48 8B C6 48 89 34 EA 80 BE";
-
-		const std::string buildNumber = "89 05 ?? ?? ?? ?? 48 8d 0d ?? ?? ?? ?? ff 15 ?? ?? ?? ?? 48 8b 0d";
 	}
 }
