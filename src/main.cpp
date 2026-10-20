@@ -64,7 +64,7 @@ int main()
     // --- START VAULTED AIMBOT THREAD ---
     // We pass the global ProcessMgr pointer directly to the thread.
     // The thread will pull the client base internally.
-    std::thread(AimbotThread, &ProcessMgr).detach(); 
+    std::thread(AimbotThread, &ProcessMgr, ProcessMgr.base_client_.base).detach(); 
     // -----------------------------------
 
     // Locking
