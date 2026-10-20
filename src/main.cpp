@@ -27,10 +27,6 @@
 
 #include <external/exception.hpp>
 
-// NOTE: If "ProcessMgr" causes an error, open Engine.hpp, 
-// find the exact name of the pProcess instance, and replace it here.
-extern pProcess ProcessMgr;
-
 int main()
 {
     c_exception_handler::setup();
@@ -62,9 +58,8 @@ int main()
     LOGF(INFO, "Everything setup and ready, just... make sure you are not in \"Full Screen\"!");
 
     // --- START VAULTED AIMBOT THREAD ---
-    // We pass the global ProcessMgr pointer directly to the thread.
-    // The thread will pull the client base internally.
-    std::thread(AimbotThread, &ProcessMgr, ProcessMgr.base_client_.base).detach(); 
+    // We use Engine::GetProcess() to get the correct pointer!
+    std::thread(AimbotThread, Engine::GetProcess()).detach(); 
     // -----------------------------------
 
     // Locking
