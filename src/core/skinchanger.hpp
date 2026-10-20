@@ -18,6 +18,7 @@ constexpr std::ptrdiff_t m_flFallbackWear = 0x1C4;
 constexpr std::ptrdiff_t m_nFallbackSeed = 0x1C8;
 constexpr std::ptrdiff_t m_iItemIDHigh = 0x1D0;
 constexpr std::ptrdiff_t m_iAccountID = 0x1D4;
+constexpr std::ptrdiff_t m_bInitialized = 0x1E8; // Forces update
 
 // --- DATABASES FOR UI ---
 struct WeaponInfo { int id; const char* name; };
@@ -32,54 +33,24 @@ inline const std::vector<WeaponInfo> g_WeaponList = {
 };
 
 inline const std::map<int, std::string> g_SkinDatabase = {
-    // Desert Eagle
-    { 37, "Desert Eagle | Blaze" },
-    { 962, "Desert Eagle | Printstream" },
-    { 711, "Desert Eagle | Code Red" },
-    // Glock-18
-    { 38, "Glock-18 | Fade" },
-    { 964, "Glock-18 | Vogue" },
-    { 683, "Glock-18 | Water Elemental" },
-    // AK-47
-    { 44, "AK-47 | Case Hardened" },
-    { 282, "AK-47 | Redline" },
-    { 180, "AK-47 | Fire Serpent" },
-    { 639, "AK-47 | Bloodsport" },
-    { 600, "AK-47 | Neon Rider" },
-    // AWP
-    { 279, "AWP | Asiimov" },
-    { 344, "AWP | Dragon Lore" },
-    { 803, "AWP | Containment Breach" },
-    { 475, "AWP | Hyper Beast" },
-    // M4A4
-    { 309, "M4A4 | Howl" },
-    { 255, "M4A4 | Asiimov" },
-    { 610, "M4A4 | Neo-Noir" },
-    // M4A1-S
-    { 984, "M4A1-S | Printstream" },
-    { 360, "M4A1-S | Cyrex" },
-    { 430, "M4A1-S | Hyper Beast" },
-    // USP-S
-    { 504, "USP-S | Kill Confirmed" },
-    { 653, "USP-S | Neo-Noir" },
-    { 313, "USP-S | Orion" }
+    { 37, "Desert Eagle | Blaze" }, { 962, "Desert Eagle | Printstream" }, { 711, "Desert Eagle | Code Red" },
+    { 38, "Glock-18 | Fade" }, { 964, "Glock-18 | Vogue" }, { 683, "Glock-18 | Water Elemental" },
+    { 44, "AK-47 | Case Hardened" }, { 282, "AK-47 | Redline" }, { 180, "AK-47 | Fire Serpent" }, { 639, "AK-47 | Bloodsport" }, { 600, "AK-47 | Neon Rider" },
+    { 279, "AWP | Asiimov" }, { 344, "AWP | Dragon Lore" }, { 803, "AWP | Containment Breach" }, { 475, "AWP | Hyper Beast" },
+    { 309, "M4A4 | Howl" }, { 255, "M4A4 | Asiimov" }, { 610, "M4A4 | Neo-Noir" },
+    { 984, "M4A1-S | Printstream" }, { 360, "M4A1-S | Cyrex" }, { 430, "M4A1-S | Hyper Beast" },
+    { 504, "USP-S | Kill Confirmed" }, { 653, "USP-S | Neo-Noir" }, { 313, "USP-S | Orion" }
 };
 
 inline const char* GetWeaponName(int id) {
-    for (const auto& w : g_WeaponList) {
-        if (w.id == id) return w.name;
-    }
+    for (const auto& w : g_WeaponList) { if (w.id == id) return w.name; }
     return "Unknown Weapon";
 }
-
 inline const char* GetSkinName(int id) {
     auto it = g_SkinDatabase.find(id);
-    if (it != g_SkinDatabase.end()) {
-        return it->second.c_str();
-    }
+    if (it != g_SkinDatabase.end()) return it->second.c_str();
     return "Unknown Skin";
 }
-// ------------------------
 
 struct SkinchangerSettings {
     bool enabled = false;
@@ -100,7 +71,6 @@ inline void SkinchangerThread(pProcess* proc) {
         uintptr_t clientBase = proc->base_client_.base;
         if (!clientBase) continue;
 
-        // Get Local Pawn
         uintptr_t localController = proc->read<uintptr_t>(clientBase + offsets::localPlayerController);
         if (!localController) continue;
         
@@ -117,19 +87,16 @@ inline void SkinchangerThread(pProcess* proc) {
         uintptr_t localPawn = proc->read<uintptr_t>(listEntryLocal + 0x10 * (localIndex & 0x1FF));
         if (!localPawn) continue;
 
-        // Get Account ID once
         if (g_local_account_id == 0) {
             g_local_account_id = proc->read<uint32_t>(localController + offsets::controller::m_steamID);
         }
 
-        // Get Active Weapon Services
         uintptr_t weaponServices = proc->read<uintptr_t>(localPawn + offsets::pawn::m_pWeaponServices);
         if (!weaponServices) continue;
         
         uint32_t activeWeaponHandle = proc->read<uint32_t>(weaponServices + offsets::pawn::m_hActiveWeapon);
         if (!activeWeaponHandle) continue;
 
-        // Resolve Weapon Entity
         int weaponIndex = activeWeaponHandle & 0x7FFF;
         uintptr_t listEntryWeapon = proc->read<uintptr_t>(entityList + 0x10 * (weaponIndex & 0x7FFF) + 0x8 * (weaponIndex >> 15));
         if (!listEntryWeapon) continue;
@@ -137,10 +104,8 @@ inline void SkinchangerThread(pProcess* proc) {
         uintptr_t weapon = proc->read<uintptr_t>(listEntryWeapon + 0x10 * (weaponIndex & 0x1FF));
         if (!weapon) continue;
 
-        // Get EconItemView base (m_AttributeManager + m_Item)
         uintptr_t econItemView = weapon + offsets::pawn::m_AttributeManager + offsets::pawn::m_Item;
 
-        // Check if holding the target weapon
         uint16_t currentDefIndex = proc->read<uint16_t>(econItemView + m_iItemDefinitionIndex);
         if (currentDefIndex != g_Skinchanger.target_weapon_id) continue;
 
@@ -148,7 +113,11 @@ inline void SkinchangerThread(pProcess* proc) {
         proc->write<int>(econItemView + m_nFallbackPaintKit, g_Skinchanger.skin_id);
         proc->write<float>(econItemView + m_flFallbackWear, g_Skinchanger.wear);
         proc->write<int>(econItemView + m_nFallbackSeed, g_Skinchanger.seed);
-        proc->write<int>(econItemView + m_iItemIDHigh, -1); // Force update
+        proc->write<int>(econItemView + m_iItemIDHigh, -1);
         proc->write<uint32_t>(econItemView + m_iAccountID, g_local_account_id);
+        
+        // Force the game to apply the update
+        proc->write<bool>(econItemView + m_bInitialized, false);
+        proc->write<bool>(econItemView + m_bInitialized, true);
     }
 }
