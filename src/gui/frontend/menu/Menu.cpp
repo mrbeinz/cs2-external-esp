@@ -1,5 +1,5 @@
 #include "Menu.hpp"
-
+#include "core/Aimbot.hpp"
 #include "core/engine/cache/Cache.hpp"
 #include "gui/renderer/Renderer.hpp" // Circular dependency
 #include "gui/renderer/window/Window.hpp" // Circular dependency
