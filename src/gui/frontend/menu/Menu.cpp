@@ -2,8 +2,8 @@
 #include "core/Aimbot.hpp"
 #include "core/Skinchanger.hpp"
 #include "core/engine/cache/Cache.hpp"
-#include "gui/renderer/Renderer.hpp" // Circular dependency
-#include "gui/renderer/window/Window.hpp" // Circular dependency
+#include "gui/renderer/Renderer.hpp"
+#include "gui/renderer/window/Window.hpp"
 #include "assets/fonts/Icons.h"
 
 bool Menu::Init() {
@@ -143,11 +143,43 @@ void Menu::RenderImpl() {
 						ImGui::SliderFloat("FOV", &g_Aimbot.fov, 1.0f, 180.0f, "%.1f");
 						ImGui::SliderFloat("Smoothness", &g_Aimbot.smooth, 1.0f, 10.0f, "%.1f");
 						ImGui::Checkbox("Team Check", &g_Aimbot.teamCheck);
+						
+						ImGui::Spacing();
+						
+						// --- KEYBIND BUTTON ---
+						static bool waiting_for_key = false;
+						char buf[128];
+						
+						if (waiting_for_key) {
+							strcpy_s(buf, sizeof(buf), "Press any key to bind...");
+							
+							// Check all keys
+							for (int i = 1; i < 255; i++) {
+								if (GetAsyncKeyState(i) & 0x8000) {
+									// Ignore mouse clicks so they don't bind accidentally when clicking UI
+									if (i != VK_LBUTTON && i != VK_RBUTTON) {
+										g_Aimbot.hotkey = i;
+										waiting_for_key = false;
+										break;
+									}
+								}
+							}
+							
+							// Also allow ESC to clear the bind
+							if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
+								g_Aimbot.hotkey = 0;
+								waiting_for_key = false;
+							}
+						} else {
+							sprintf_s(buf, sizeof(buf), "Aim Key: %s", GetKeyName(g_Aimbot.hotkey));
+							if (ImGui::Button(buf, ImVec2(-1, 24))) {
+								waiting_for_key = true;
+							}
+						}
+						ImGui::TextDisabled("Click the button above to change.");
+						ImGui::TextDisabled("Press ESC while binding to set to 'Always'.");
 					}
 					ImGui::EndDisabled();
-					
-					ImGui::Spacing();
-					ImGui::TextDisabled("Hotkey: Mouse 5");
 				}
 				// --- SKINS TAB CONTENT ---
 				else if (active_tab == 4)
@@ -159,7 +191,6 @@ void Menu::RenderImpl() {
 					ImGui::Checkbox("Enable Skinchanger", &g_Skinchanger.enabled);
 					ImGui::BeginDisabled(!g_Skinchanger.enabled);
 					{
-						// Weapon Dropdown
 						if (ImGui::BeginCombo("Weapon", GetWeaponName(g_Skinchanger.target_weapon_id))) {
 							for (const auto& w : g_WeaponList) {
 								bool is_selected = (g_Skinchanger.target_weapon_id == w.id);
@@ -171,7 +202,6 @@ void Menu::RenderImpl() {
 							ImGui::EndCombo();
 						}
 
-						// Skin Dropdown
 						if (ImGui::BeginCombo("Skin", GetSkinName(g_Skinchanger.skin_id))) {
 							for (const auto& pair : g_SkinDatabase) {
 								bool is_selected = (g_Skinchanger.skin_id == pair.first);
