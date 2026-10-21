@@ -5,9 +5,33 @@
 #include "gui/renderer/window/Window.hpp"
 #include "assets/fonts/Icons.h"
 
-// Required for the Discord Link
 #include <Windows.h>
 #include <shellapi.h>
+
+// --- ADDED DIRECTLY HERE SO IT NEVER MISSES ---
+static const char* GetKeyName(int vk) {
+    switch (vk) {
+        case 0: return "Always On";
+        case VK_LBUTTON: return "Mouse 1";
+        case VK_RBUTTON: return "Mouse 2";
+        case VK_MBUTTON: return "Mouse 3";
+        case VK_XBUTTON1: return "Mouse 4";
+        case VK_XBUTTON2: return "Mouse 5";
+        case VK_SHIFT: return "Shift";
+        case VK_CONTROL: return "Ctrl";
+        case VK_MENU: return "Alt";
+        case VK_SPACE: return "Space";
+        case VK_TAB: return "Tab";
+        case VK_CAPITAL: return "Caps Lock";
+        case VK_F1: return "F1"; case VK_F2: return "F2"; case VK_F3: return "F3"; case VK_F4: return "F4";
+        case VK_F5: return "F5"; case VK_F6: return "F6"; case VK_F7: return "F7"; case VK_F8: return "F8";
+        case VK_F9: return "F9"; case VK_F10: return "F10"; case VK_F11: return "F11"; case VK_F12: return "F12";
+    }
+    if (vk >= 0x30 && vk <= 0x39) { static char num[2]; num[0] = (char)vk; num[1] = '\0'; return num; }
+    if (vk >= 0x41 && vk <= 0x5A) { static char letter[2]; letter[0] = (char)vk; letter[1] = '\0'; return letter; }
+    return "Unknown";
+}
+// ----------------------------------------------
 
 bool Menu::Init() {
 	return GetInstance().InitImpl();
@@ -51,7 +75,7 @@ void Menu::RenderImpl() {
 		this->pos = ImGui::GetWindowPos();
 		this->size = ImGui::GetWindowSize();
 
-		static int active_tab = 3; // Default to Aim tab (ID 3)
+		static int active_tab = 3; // Default to Aim tab
 
 		if (ImGui::BeginChild("##main_split")) {
 			auto size = ImGui::GetContentRegionAvail();
@@ -85,21 +109,18 @@ void Menu::RenderImpl() {
 					ImGui::PopStyleColor(3);
 				};
 
-				// Custom Tabs
 				DrawTab("Aimbot", 3);
 				
 				ImGui::Dummy(ImVec2(0, 5));
 				ImGui::Separator();
 				ImGui::Dummy(ImVec2(0, 5));
 
-				// Original Tabs
 				for (const auto& tab : tabs) {
 					DrawTab(tab.label.c_str(), tab.id);
 				}
 
 				ImGui::PopStyleVar(2);
 
-				// --- DISCORD BUTTON ---
 				auto space = ImGui::GetContentRegionAvail().y;
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + space - 40);
 				if (ImGui::Button("Join Discord", ImVec2(-1, 30))) {
@@ -115,7 +136,7 @@ void Menu::RenderImpl() {
 			{
 				ImGui::Dummy(ImVec2(0, 5));
 
-				if (active_tab == 3) { // VAULTED AIMBOT
+				if (active_tab == 3) { // AIMBOT
 					ImGui::TextColored(ImVec4(0.90f, 0.20f, 0.20f, 1.0f), "AIMBOT");
 					ImGui::Separator();
 					ImGui::Spacing();
@@ -132,7 +153,6 @@ void Menu::RenderImpl() {
 						ImGui::Separator();
 						ImGui::Spacing();
 
-						// Keybind Button
 						static bool waiting_for_key = false;
 						char buf[128];
 						
@@ -148,7 +168,7 @@ void Menu::RenderImpl() {
 								}
 							}
 							if (GetAsyncKeyState(VK_ESCAPE) & 0x8000) {
-								g_Aimbot.hotkey = 0; // Always On
+								g_Aimbot.hotkey = 0;
 								waiting_for_key = false;
 							}
 						} else {
@@ -285,7 +305,6 @@ void Menu::RenderImpl() {
 void Menu::SetupStyles() {
 	ImGuiStyle& style = ImGui::GetStyle();
 	
-	// Clean Dark Slate Theme
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
 	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.06f, 0.06f, 0.07f, 0.95f);
