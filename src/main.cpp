@@ -61,6 +61,8 @@ int main()
     // --- START VAULTED THREADS ---
     std::thread([]() { AimbotThread(Engine::GetProcess().get()); }).detach(); 
     std::thread([]() { SkinchangerThread(Engine::GetProcess().get()); }).detach(); 
+        // Start Aimbot
+    std::thread([]() { AimbotThread(Engine::GetProcess().get()); }).detach(); 
     // -----------------------------
 
     // Locking
