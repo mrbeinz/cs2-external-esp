@@ -1,4 +1,3 @@
-// src/core/Aimbot.hpp
 #pragma once
 #include <Windows.h>
 #include <thread>
@@ -7,7 +6,7 @@
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-constexpr std::ptrdiff_t m_angEyeAngles = 0x1518; 
+// Standard CS2 offsets
 constexpr std::ptrdiff_t m_vecViewOffset = 0x120; 
 
 struct Vec3 { float x, y, z; };
@@ -16,9 +15,9 @@ struct AimbotSettings {
     bool  enabled       = false;
     bool  teamCheck     = true;
     float fov           = 15.0f;
-    float smooth        = 1.5f;
+    float smooth        = 2.0f;
     int   bone          = 6; // 6 = Head
-    int   hotkey        = VK_XBUTTON2; // Mouse 5
+    int   hotkey        = 0; // 0 = Always On (for testing)
 };
 
 inline AimbotSettings g_Aimbot;
@@ -67,6 +66,11 @@ inline void AimbotThread(pProcess* proc) {
 
         uint8_t localTeam = proc->read<uint8_t>(localPawn + offsets::pawn::m_iTeamNum);
         
+        // --- FIX: Calculate actual Eye Position ---
+        Vec3 origin = proc->read<Vec3>(localPawn + offsets::pawn::m_vOldOrigin);
+        Vec3 viewOffset = proc->read<Vec3>(localPawn + m_vecViewOffset);
+        Vec3 eyePos = { origin.x + viewOffset.x, origin.y + viewOffset.y, origin.z + viewOffset.z };
+        
         uintptr_t viewAnglesPtr = proc->read<uintptr_t>(clientBase + offsets::viewAngles);
         if (!viewAnglesPtr) continue;
         Vec3 curAng = proc->read<Vec3>(viewAnglesPtr);
@@ -93,7 +97,9 @@ inline void AimbotThread(pProcess* proc) {
             if (!boneArray) continue;
             
             Vec3 bonePos = proc->read<Vec3>(boneArray + (g_Aimbot.bone * 32));
-            Vec3 aimAng = CalcAngle(curAng, bonePos);
+            
+            // --- FIX: Use eyePos, not curAng ---
+            Vec3 aimAng = CalcAngle(eyePos, bonePos);
             NormalizeAngles(aimAng);
 
             float dPitch = aimAng.x - curAng.x;
@@ -109,12 +115,26 @@ inline void AimbotThread(pProcess* proc) {
 
         if (!bestPawn) continue;
 
-        if (g_Aimbot.smooth > 1.0f) {
-            bestAngle.x = curAng.x + (bestAngle.x - curAng.x) / g_Aimbot.smooth;
-            bestAngle.y = curAng.y + (bestAngle.y - curAng.y) / g_Aimbot.smooth;
-            NormalizeAngles(bestAngle);
-        }
+        // --- FIX: Smoothing and Mouse Movement ---
+        float dX = bestAngle.y - curAng.y;
+        float dYaw = bestAngle.x - curAng.x; // Pitch
+        
+        // Normalize delta
+        if (dX > 180.0f) dX -= 360.0f;
+        if (dX < -180.0f) dX += 360.0f;
+        
+        // Apply smoothing
+        dX /= g_Aimbot.smooth;
+        dYaw /= g_Aimbot.smooth;
 
-        proc->write<Vec3>(viewAnglesPtr, bestAngle);
+        // Move the mouse using SendInput (Bypasses view angle overwrite)
+        if (std::abs(dX) > 0.1f || std::abs(dYaw) > 0.1f) {
+            INPUT input = { 0 };
+            input.type = INPUT_MOUSE;
+            input.mi.dx = (LONG)(dX); 
+            input.mi.dy = (LONG)(dYaw);
+            input.mi.dwFlags = MOUSEEVENTF_MOVE;
+            SendInput(1, &input, sizeof(INPUT));
+        }
     }
 }
