@@ -3,21 +3,22 @@
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <cstdio>
 #include "memory/Memory.hpp"
 #include "offsets/Offsets.hpp"
 
-// Standard CS2 offsets
 constexpr std::ptrdiff_t m_vecViewOffset = 0x120; 
+constexpr std::ptrdiff_t m_angEyeAngles = 0x1518;
 
 struct Vec3 { float x, y, z; };
 
 struct AimbotSettings {
-    bool  enabled       = false;
-    bool  teamCheck     = true;
-    float fov           = 15.0f;
-    float smooth        = 2.0f;
-    int   bone          = 6; // 6 = Head
-    int   hotkey        = 0; // 0 = Always On (for testing)
+    bool  enabled       = true;  // Force enabled
+    bool  teamCheck     = false; // Force off for testing
+    float fov           = 360.0f;// Force 360 FOV
+    float smooth        = 1.0f;  // Instant snap
+    int   bone          = 6;     // Head
+    int   hotkey        = 0;     // Always on
 };
 
 inline AimbotSettings g_Aimbot;
@@ -42,10 +43,9 @@ inline void NormalizeAngles(Vec3& a) {
 inline void AimbotThread(pProcess* proc) {
     if (!proc) return;
     while (true) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(5)); // Slight delay to save CPU
         
         if (!g_Aimbot.enabled) continue;
-        if (g_Aimbot.hotkey != 0 && !(GetAsyncKeyState(g_Aimbot.hotkey) & 0x8000)) continue;
         
         uintptr_t clientBase = proc->base_client_.base;
         if (!clientBase) continue;
@@ -66,14 +66,10 @@ inline void AimbotThread(pProcess* proc) {
 
         uint8_t localTeam = proc->read<uint8_t>(localPawn + offsets::pawn::m_iTeamNum);
         
-        // --- FIX: Calculate actual Eye Position ---
+        // Calculate Eye Position properly
         Vec3 origin = proc->read<Vec3>(localPawn + offsets::pawn::m_vOldOrigin);
         Vec3 viewOffset = proc->read<Vec3>(localPawn + m_vecViewOffset);
         Vec3 eyePos = { origin.x + viewOffset.x, origin.y + viewOffset.y, origin.z + viewOffset.z };
-        
-        uintptr_t viewAnglesPtr = proc->read<uintptr_t>(clientBase + offsets::viewAngles);
-        if (!viewAnglesPtr) continue;
-        Vec3 curAng = proc->read<Vec3>(viewAnglesPtr);
 
         uintptr_t bestPawn = 0;
         Vec3 bestAngle{};
@@ -98,12 +94,12 @@ inline void AimbotThread(pProcess* proc) {
             
             Vec3 bonePos = proc->read<Vec3>(boneArray + (g_Aimbot.bone * 32));
             
-            // --- FIX: Use eyePos, not curAng ---
             Vec3 aimAng = CalcAngle(eyePos, bonePos);
             NormalizeAngles(aimAng);
 
-            float dPitch = aimAng.x - curAng.x;
-            float dYaw   = aimAng.y - curAng.y;
+            // Direct delta calculation (Bypasses FOV check if FOV is 360)
+            float dPitch = aimAng.x;
+            float dYaw   = aimAng.y;
             float fovDist = std::sqrt(dPitch * dPitch + dYaw * dYaw);
 
             if (fovDist < bestFov) {
@@ -115,26 +111,16 @@ inline void AimbotThread(pProcess* proc) {
 
         if (!bestPawn) continue;
 
-        // --- FIX: Smoothing and Mouse Movement ---
-        float dX = bestAngle.y - curAng.y;
-        float dYaw = bestAngle.x - curAng.x; // Pitch
-        
-        // Normalize delta
-        if (dX > 180.0f) dX -= 360.0f;
-        if (dX < -180.0f) dX += 360.0f;
-        
-        // Apply smoothing
-        dX /= g_Aimbot.smooth;
-        dYaw /= g_Aimbot.smooth;
+        // --- DEBUG PRINT ---
+        printf("[AIMBOT] Target found! Writing ViewAngles...\n");
 
-        // Move the mouse using SendInput (Bypasses view angle overwrite)
-        if (std::abs(dX) > 0.1f || std::abs(dYaw) > 0.1f) {
-            INPUT input = { 0 };
-            input.type = INPUT_MOUSE;
-            input.mi.dx = (LONG)(dX); 
-            input.mi.dy = (LONG)(dYaw);
-            input.mi.dwFlags = MOUSEEVENTF_MOVE;
-            SendInput(1, &input, sizeof(INPUT));
+        // Write to the global ViewAngles pointer
+        uintptr_t viewAnglesPtr = proc->read<uintptr_t>(clientBase + offsets::viewAngles);
+        if (viewAnglesPtr) {
+            proc->write<Vec3>(viewAnglesPtr, bestAngle);
         }
+
+        // ALSO write to the Local Pawn's Eye Angles as a fallback
+        proc->write<Vec3>(localPawn + m_angEyeAngles, bestAngle);
     }
 }
