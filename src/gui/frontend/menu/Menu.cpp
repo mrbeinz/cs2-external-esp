@@ -1,19 +1,33 @@
 #include "Menu.hpp"
 #include "core/Aimbot.hpp"
-#include "core/Skinchanger.hpp"
 #include "core/engine/cache/Cache.hpp"
 #include "gui/renderer/Renderer.hpp"
 #include "gui/renderer/window/Window.hpp"
+#include "assets/fonts/Icons.h"
 
-// Required for opening the Discord link
+// Required for the Discord Link
 #include <Windows.h>
 #include <shellapi.h>
 
-bool Menu::Init() { return GetInstance().InitImpl(); }
-void Menu::Render() { return GetInstance().RenderImpl(); }
-void Menu::RenderStartupHelp() { return GetInstance().RenderStartupHelpImpl(); }
-ImVec2 Menu::GetPos() { return GetInstance().pos; }
-ImVec2 Menu::GetSize() { return GetInstance().size; }
+bool Menu::Init() {
+	return GetInstance().InitImpl();
+}
+
+void Menu::Render() {
+	return GetInstance().RenderImpl();
+}
+
+void Menu::RenderStartupHelp() {
+	return GetInstance().RenderStartupHelpImpl();
+}
+
+ImVec2 Menu::GetPos() {
+	return GetInstance().pos;
+}
+
+ImVec2 Menu::GetSize() {
+	return GetInstance().size;
+}
 
 bool Menu::InitImpl() {
 	SetupStyles();
@@ -27,9 +41,9 @@ void Menu::RenderImpl() {
 	static auto io = ImGui::GetIO();
 	static auto screen = io.DisplaySize;
 	static auto color_flags = ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_None;
+
 	static auto title = "VAULTED";
 
-	// Clean, hard-edged window
 	ImGui::SetNextWindowSize(ImVec2(650, 450), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowPos(ImVec2(screen.x / 2 - 325, screen.y / 2 - 225), ImGuiCond_FirstUseEver);
 
@@ -37,7 +51,7 @@ void Menu::RenderImpl() {
 		this->pos = ImGui::GetWindowPos();
 		this->size = ImGui::GetWindowSize();
 
-		static int active_tab = 0;
+		static int active_tab = 3; // Default to Aim tab (ID 3)
 
 		if (ImGui::BeginChild("##main_split")) {
 			auto size = ImGui::GetContentRegionAvail();
@@ -45,19 +59,16 @@ void Menu::RenderImpl() {
 			// --- SIDEBAR ---
 			ImGui::BeginChild("##tab_buttons", ImVec2(140, size.y), true);
 			{
-				// Branding
 				ImGui::SetCursorPosX(15);
 				ImGui::SetCursorPosY(20);
-				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.90f, 0.20f, 0.20f, 1.0f)); // Crimson Accent
+				ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.90f, 0.20f, 0.20f, 1.0f));
 				ImGui::Text("VAULTED");
 				ImGui::PopStyleColor();
 				
-				ImGui::SetCursorPosY(35);
-				ImGui::Separator();
-				ImGui::SetCursorPosY(50);
+				ImGui::SetCursorPosY(35); ImGui::Separator(); ImGui::SetCursorPosY(50);
 
 				ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 8)); // Thicker buttons
+				ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(12, 8));
 
 				auto DrawTab = [&](const char* label, int id) {
 					bool is_active = (active_tab == id);
@@ -66,7 +77,7 @@ void Menu::RenderImpl() {
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.90f, 0.20f, 0.20f, 1.0f));
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 1.0f, 1.0f));
 					} else {
-						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f)); // Invisible bg
+						ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 						ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.15f, 0.15f, 0.18f, 1.0f));
 						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.60f, 0.60f, 0.60f, 1.0f));
 					}
@@ -76,7 +87,6 @@ void Menu::RenderImpl() {
 
 				// Custom Tabs
 				DrawTab("Aimbot", 3);
-				DrawTab("Skinchanger", 4);
 				
 				ImGui::Dummy(ImVec2(0, 5));
 				ImGui::Separator();
@@ -89,11 +99,9 @@ void Menu::RenderImpl() {
 
 				ImGui::PopStyleVar(2);
 
-				// --- BOTTOM SIDEBAR ---
+				// --- DISCORD BUTTON ---
 				auto space = ImGui::GetContentRegionAvail().y;
 				ImGui::SetCursorPosY(ImGui::GetCursorPosY() + space - 40);
-				
-				// Discord Button
 				if (ImGui::Button("Join Discord", ImVec2(-1, 30))) {
 					ShellExecuteA(NULL, "open", "https://discord.gg/yesbh5jzzA", NULL, NULL, SW_SHOWNORMAL);
 				}
@@ -105,9 +113,9 @@ void Menu::RenderImpl() {
 			// --- CONTENT AREA ---
 			ImGui::BeginChild("##tab_content", ImVec2(0, size.y), true);
 			{
-				ImGui::Dummy(ImVec2(0, 5)); // Top padding
+				ImGui::Dummy(ImVec2(0, 5));
 
-				if (active_tab == 3) { // AIMBOT
+				if (active_tab == 3) { // VAULTED AIMBOT
 					ImGui::TextColored(ImVec4(0.90f, 0.20f, 0.20f, 1.0f), "AIMBOT");
 					ImGui::Separator();
 					ImGui::Spacing();
@@ -158,53 +166,75 @@ void Menu::RenderImpl() {
 					}
 					ImGui::EndDisabled();
 				}
-				else if (active_tab == 4) { // SKINS
-					ImGui::TextColored(ImVec4(0.90f, 0.20f, 0.20f, 1.0f), "SKINCHANGER");
-					ImGui::Separator();
-					ImGui::Spacing();
-
-					ImGui::Checkbox("Enable Skinchanger", &g_Skinchanger.enabled);
-					ImGui::BeginDisabled(!g_Skinchanger.enabled);
-					{
-						ImGui::Spacing();
-						if (ImGui::BeginCombo("Weapon", GetWeaponName(g_Skinchanger.target_weapon_id))) {
-							for (const auto& w : g_WeaponList) {
-								bool is_selected = (g_Skinchanger.target_weapon_id == w.id);
-								if (ImGui::Selectable(w.name, is_selected)) g_Skinchanger.target_weapon_id = w.id;
-							}
-							ImGui::EndCombo();
-						}
-						if (ImGui::BeginCombo("Skin", GetSkinName(g_Skinchanger.skin_id))) {
-							for (const auto& pair : g_SkinDatabase) {
-								bool is_selected = (g_Skinchanger.skin_id == pair.first);
-								if (ImGui::Selectable(pair.second.c_str(), is_selected)) g_Skinchanger.skin_id = pair.first;
-							}
-							ImGui::EndCombo();
-						}
-						ImGui::SliderFloat("Wear", &g_Skinchanger.wear, 0.0f, 1.0f, "%.4f");
-						ImGui::SliderInt("Pattern Seed", &g_Skinchanger.seed, 0, 1000);
-						ImGui::Spacing();
-						ImGui::TextDisabled("Hold the weapon in-game to apply.");
-					}
-					ImGui::EndDisabled();
-				}
 				else if (active_tab == Tab::PLAYER) {
 					ImGui::TextColored(ImVec4(0.90f, 0.20f, 0.20f, 1.0f), "PLAYER VISUALS");
 					ImGui::Separator();
 					ImGui::Spacing();
-					
-					ImGui::BeginGroup();
-					ImGui::Checkbox("Box ESP", &cfg::esp::box);
-					ImGui::Checkbox("Skeleton", &cfg::esp::skeleton);
-					ImGui::Checkbox("Tracers", &cfg::esp::tracers);
-					ImGui::EndGroup();
-					
-					ImGui::SameLine(150);
 
 					ImGui::BeginGroup();
-					ImGui::Checkbox("Health Bar", &cfg::esp::health);
-					ImGui::Checkbox("Name", &cfg::esp::flags::name);
-					ImGui::Checkbox("Weapon", &cfg::esp::flags::weapon);
+					{
+						ImGui::Checkbox("Box", &cfg::esp::box);
+						ImGui::BeginDisabled(!cfg::esp::box);
+						ImGui::SameLine(); ImGui::ColorEdit4("Team box color", cfg::esp::colors::box_team.data(), color_flags);
+						ImGui::SameLine(); ImGui::ColorEdit4("Enemy box color", cfg::esp::colors::box_enemy.data(), color_flags);
+						ImGui::EndDisabled();
+
+						ImGui::Checkbox("Skeleton", &cfg::esp::skeleton);
+						ImGui::BeginDisabled(!cfg::esp::skeleton);
+						ImGui::SameLine(); ImGui::ColorEdit4("Team skeleton color", cfg::esp::colors::skeleton_team.data(), color_flags);
+						ImGui::SameLine(); ImGui::ColorEdit4("Enemy skeleton color", cfg::esp::colors::skeleton_enemy.data(), color_flags);
+						ImGui::EndDisabled();
+
+						ImGui::Checkbox("Head Tracker", &cfg::esp::head_tracker);
+						ImGui::BeginDisabled(!cfg::esp::head_tracker);
+						ImGui::SameLine(); ImGui::ColorEdit4("Team head tracker color", cfg::esp::colors::tracker_team.data(), color_flags);
+						ImGui::SameLine(); ImGui::ColorEdit4("Enemy head tracker color", cfg::esp::colors::tracker_enemy.data(), color_flags);
+						ImGui::EndDisabled();
+
+						ImGui::Checkbox("Tracers", &cfg::esp::tracers);
+						ImGui::BeginDisabled(!cfg::esp::tracers);
+						ImGui::SameLine(); ImGui::ColorEdit4("Team tracer color", cfg::esp::colors::tracer_team.data(), color_flags);
+						ImGui::SameLine(); ImGui::ColorEdit4("Enemy tracer color", cfg::esp::colors::tracer_enemy.data(), color_flags);
+						ImGui::EndDisabled();
+					}
+					ImGui::EndGroup();
+
+					ImGui::SameLine();
+
+					ImGui::BeginGroup();
+					{
+						ImGui::Checkbox("Health", &cfg::esp::health);
+						if (cfg::esp::health) ImGui::Checkbox("Health Number", &cfg::esp::health_number);
+						ImGui::Checkbox("Armor", &cfg::esp::armor);
+						ImGui::Checkbox("Spotted", &cfg::esp::spotted);
+						ImGui::Checkbox("Show Team", &cfg::esp::team);
+					}
+					ImGui::EndGroup();
+
+					ImGui::Spacing();
+					ImGui::Text("Flags");
+					ImGui::Separator();
+
+					ImGui::BeginGroup();
+					{
+						ImGui::Checkbox("Flashed", &cfg::esp::flags::flashed);
+						ImGui::Checkbox("Reloading", &cfg::esp::flags::reloading);
+						ImGui::Checkbox("Defusing", &cfg::esp::flags::defusing);
+						ImGui::Checkbox("Scoped", &cfg::esp::flags::scoped);
+						ImGui::Checkbox("Has C4", &cfg::esp::flags::has_c4);
+					}
+					ImGui::EndGroup();
+
+					ImGui::SameLine();
+
+					ImGui::BeginGroup();
+					{
+						ImGui::Checkbox("Name", &cfg::esp::flags::name);
+						ImGui::Checkbox("Money", &cfg::esp::flags::money);
+						ImGui::Checkbox("Weapon", &cfg::esp::flags::weapon);
+						ImGui::Checkbox("Ammo", &cfg::esp::flags::ammo);
+						ImGui::Checkbox("Ping", &cfg::esp::flags::ping);
+					}
 					ImGui::EndGroup();
 				}
 				else if (active_tab == Tab::WORLD) {
@@ -213,8 +243,25 @@ void Menu::RenderImpl() {
 					ImGui::Spacing();
 					
 					ImGui::Checkbox("Bomb ESP", &cfg::esp::bomb);
+					ImGui::SameLine(); ImGui::ColorEdit4("Bomb color", cfg::esp::colors::bomb.data(), color_flags);
 					ImGui::Checkbox("Bomb Timer", &cfg::world::bomb::timer);
+
+					ImGui::Spacing();
+					ImGui::Text("Spectators");
+					ImGui::Separator();
+					ImGui::Checkbox("Enable", &cfg::world::spectators::enabled);
+					if (cfg::world::spectators::enabled) {
+						ImGui::Checkbox("Detailed", &cfg::world::spectators::detailed);
+						ImGui::Checkbox("Only Self", &cfg::world::spectators::self_only);
+					}
+
+					ImGui::Spacing();
+					ImGui::Text("Misc");
+					ImGui::Separator();
 					ImGui::Checkbox("Radar", &cfg::world::radar::enabled);
+					if (cfg::world::radar::enabled) {
+						ImGui::SameLine(); ImGui::SliderFloat("Range", &cfg::world::radar::range, 100.f, 8000.f, "%.0f");
+					}
 				}
 				else if (active_tab == Tab::SETTINGS) {
 					ImGui::TextColored(ImVec4(0.90f, 0.20f, 0.20f, 1.0f), "SETTINGS");
@@ -225,8 +272,6 @@ void Menu::RenderImpl() {
 						Window::SetAffinity(Window::hwnd, cfg::settings::streamproof ? WindowAffinity::Invisible : WindowAffinity::Disabled);
 					}
 					if (ImGui::Checkbox("VSync", &cfg::settings::vsync)) Window::vsync = cfg::settings::vsync;
-					
-					ImGui::Spacing();
 					ImGui::Checkbox("Free CPU", &cfg::settings::free_cpu);
 				}
 			}
@@ -240,41 +285,29 @@ void Menu::RenderImpl() {
 void Menu::SetupStyles() {
 	ImGuiStyle& style = ImGui::GetStyle();
 	
-	// Clean Dark Slate Theme (No Gradients)
+	// Clean Dark Slate Theme
 	style.Colors[ImGuiCol_Text]                  = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled]          = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
-	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.06f, 0.06f, 0.07f, 1.00f); // Very dark slate
-	style.Colors[ImGuiCol_ChildBg]               = ImVec4(0.08f, 0.08f, 0.10f, 1.00f); // Slightly lighter panels
-	style.Colors[ImGuiCol_PopupBg]               = ImVec4(0.08f, 0.08f, 0.10f, 0.95f);
-	style.Colors[ImGuiCol_Border]                = ImVec4(0.15f, 0.15f, 0.18f, 1.00f); // Subtle borders
-	style.Colors[ImGuiCol_BorderShadow]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.12f, 0.12f, 0.15f, 1.00f);
-	style.Colors[ImGuiCol_FrameBgHovered]        = ImVec4(0.18f, 0.18f, 0.22f, 1.00f);
-	style.Colors[ImGuiCol_FrameBgActive]         = ImVec4(0.25f, 0.25f, 0.30f, 1.00f);
-	style.Colors[ImGuiCol_TitleBg]               = ImVec4(0.04f, 0.04f, 0.05f, 1.00f);
-	style.Colors[ImGuiCol_TitleBgActive]         = ImVec4(0.04f, 0.04f, 0.05f, 1.00f);
-	style.Colors[ImGuiCol_TitleBgCollapsed]      = ImVec4(0.04f, 0.04f, 0.05f, 1.00f);
-	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.90f, 0.20f, 0.20f, 1.00f); // Crimson Red
+	style.Colors[ImGuiCol_WindowBg]              = ImVec4(0.06f, 0.06f, 0.07f, 0.95f);
+	style.Colors[ImGuiCol_ChildBg]               = ImVec4(0.08f, 0.08f, 0.10f, 0.95f);
+	style.Colors[ImGuiCol_Border]                = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
+	style.Colors[ImGuiCol_CheckMark]             = ImVec4(0.90f, 0.20f, 0.20f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]            = ImVec4(0.90f, 0.20f, 0.20f, 1.00f);
-	style.Colors[ImGuiCol_SliderGrabActive]      = ImVec4(1.00f, 0.30f, 0.30f, 1.00f);
 	style.Colors[ImGuiCol_Button]                = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
 	style.Colors[ImGuiCol_ButtonHovered]         = ImVec4(0.20f, 0.20f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_ButtonActive]          = ImVec4(0.90f, 0.20f, 0.20f, 1.00f);
 	style.Colors[ImGuiCol_Header]                = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
 	style.Colors[ImGuiCol_HeaderHovered]         = ImVec4(0.20f, 0.20f, 0.25f, 1.00f);
 	style.Colors[ImGuiCol_HeaderActive]          = ImVec4(0.90f, 0.20f, 0.20f, 1.00f);
-	style.Colors[ImGuiCol_Separator]             = ImVec4(0.15f, 0.15f, 0.18f, 1.00f);
+	style.Colors[ImGuiCol_FrameBg]               = ImVec4(0.12f, 0.12f, 0.15f, 1.00f);
+	style.Colors[ImGuiCol_FrameBgHovered]        = ImVec4(0.18f, 0.18f, 0.22f, 1.00f);
 
-	// Geometry
 	style.FrameBorderSize = 0.0f;
-	style.WindowBorderSize = 1.0f;
 	style.WindowRounding = 6.0f;
 	style.ChildRounding = 4.0f;
 	style.FrameRounding = 4.0f;
-	style.PopupRounding = 4.0f;
-	style.GrabRounding = 4.0f;
+	style.WindowPadding = ImVec2(0, 0);
 	style.ItemSpacing = ImVec2(8, 8);
-	style.WindowPadding = ImVec2(0, 0); // Remove padding around the window itself
 
 	auto& io = ImGui::GetIO();
 	io.Fonts->Clear();
